@@ -1,0 +1,30 @@
+{
+  "exclude": [
+    "**/__pycache__",
+    "**/.*"
+  ],
+  "extraPaths": [
+    "src",
+    "../ooxml-core/src",
+    "../ooxml-spec/src",
+    "../ooxml-stubs/src",
+    "../ooxml-test-framework/src"
+  ],
+  "include": [
+    "src"
+  ],
+  "pythonPlatform": "All",
+  "pythonVersion": "3.10",
+  "reportArgumentType": "none",
+  "reportAssignmentType": "none",
+  "reportAttributeAccessIssue": "none",
+  "reportCallIssue": "none",
+  "reportImportCycles": false,
+  "reportOptionalCall": "none",
+  "reportOptionalMemberAccess": "none",
+  "reportPrivateImportUsage": "none",
+  "reportReturnType": "none",
+  "stubPath": "./typings",
+  "typeCheckingMode": "basic",
+  "verboseOutput": true
+}

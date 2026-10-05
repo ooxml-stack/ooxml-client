@@ -29,6 +29,12 @@ jobs:
       - name: Run tests and lint
         run: make check PYTHON="uv run --frozen --extra dev python"
 
+      - name: Install pyright
+        run: uv tool install pyright==1.1.411
+
+      - name: Run Python type gate
+        run: make typecheck
+
       - name: Build distributions
         env:
           OOXML_BUILD_OUTPUT: ${{ runner.temp }}/ooxml-client-dist
