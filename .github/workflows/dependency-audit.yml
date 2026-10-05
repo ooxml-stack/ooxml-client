@@ -19,4 +19,5 @@ jobs:
     with:
       scan-args: |-
         -L uv.lock
+      upload-sarif: false
       fail-on-vuln: true
