@@ -1,0 +1,30 @@
+[project]
+name = "ooxml-client"
+version = "0.1.0"
+description = "CLI and Python client for a separately installed local OOXML Engine"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+dependencies = ["mcp>=1.29.1,<2"]
+
+[project.scripts]
+ooxml = "ooxml_client.cli:main"
+
+[project.optional-dependencies]
+dev = ["hatchling==1.29.0", "ruff==0.16.5"]
+
+[build-system]
+requires = ["hatchling==1.29.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ooxml_client"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/", "tests/", "docs/", "scripts/", "README.md", "LICENSE", "AGENTS.md", "Makefile", "pyproject.toml"]
+
+[tool.ruff]
+line-length = 110
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
