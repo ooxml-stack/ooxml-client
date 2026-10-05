@@ -1,0 +1,35 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@v7
+
+      - name: Install dependencies
+        run: uv sync --frozen --extra dev
+
+      - name: Run tests and lint
+        run: make check PYTHON="uv run --frozen --extra dev python"
+
+      - name: Build distributions
+        env:
+          OOXML_BUILD_OUTPUT: ${{ runner.temp }}/ooxml-client-dist
+        run: make build PYTHON="uv run --frozen --extra dev python"
