@@ -7,6 +7,7 @@ test:
 
 lint:
 	$(PYTHON) -m ruff check src tests
+	python3 scripts/format_gate.py
 
 typecheck:
 	python3 scripts/quality_gate.py pyright
