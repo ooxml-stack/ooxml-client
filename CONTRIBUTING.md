@@ -53,3 +53,20 @@ the tested commit.
   after publication — a correction is a new tag.
 - **Changelog.** Every user-visible change gets an entry: `CHANGELOG.md` under
   Keep a Changelog, with breaking changes called out explicitly.
+
+## Regression linkage
+
+Every defect fix ships with a test that fails without it, and that test names the
+defect so a future reader can connect cause to guard:
+
+- Preferred: the test name states the behaviour that was broken
+  (`test_it_rejects_an_empty_manifest_bundle`), and the pull request description
+  carries the defect reference when one exists.
+- When a defect came from a real run (Office repair, corpus roundtrip, SDK
+  mismatch), add a comment above the test with the observed symptom, the command
+  that reproduced it, and the commit that fixed it.
+- Do not close a fix without the guard: a fix whose only evidence is the edited
+  code is not verifiable later.
+
+Historical fixes that predate this convention are not retroactively linked; the
+`CHANGELOG.md` entry for each release names the change instead.
