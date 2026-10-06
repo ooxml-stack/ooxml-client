@@ -1,0 +1,9 @@
+[run]
+source = src/ooxml_client
+omit =
+    tests/*
+    src/ooxml_client/__main__.py
+
+[report]
+fail_under = 95
+show_missing = true
