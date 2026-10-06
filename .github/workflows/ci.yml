@@ -35,6 +35,9 @@ jobs:
       - name: Run Python type gate
         run: make typecheck
 
+      - name: Run coverage gate
+        run: make coverage
+
       - name: Build distributions
         env:
           OOXML_BUILD_OUTPUT: ${{ runner.temp }}/ooxml-client-dist
