@@ -8,6 +8,10 @@ test:
 lint:
 	python3 scripts/quality_gate.py ruff
 	python3 scripts/format_gate.py
+	python3 scripts/check_action_pins.py
+	python3 scripts/check_dependency_notices.py
+	python3 scripts/size_report.py --check
+	python3 scripts/check_evidence_redaction.py
 
 typecheck:
 	python3 scripts/quality_gate.py pyright
