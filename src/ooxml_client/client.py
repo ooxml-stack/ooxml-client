@@ -23,10 +23,19 @@ class Client:
         """Configure a client for a runtime Python path or explicit MCP command."""
         if runtime_python is not None and command is not None:
             raise ValueError("Choose runtime_python or command, not both.")
-        if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or timeout <= 0:
+        if (
+            isinstance(timeout, bool)
+            or not isinstance(timeout, (int, float))
+            or not math.isfinite(timeout)
+            or timeout <= 0
+        ):
             raise ValueError("timeout must be a positive finite number.")
         if command is not None:
-            if not isinstance(command, (list, tuple)) or not command or any(not isinstance(v, str) or not v for v in command):
+            if (
+                not isinstance(command, (list, tuple))
+                or not command
+                or any(not isinstance(v, str) or not v for v in command)
+            ):
                 raise ValueError("command must be a nonempty list of nonempty arguments.")
         self.runtime_python = runtime_python
         self.command = list(command) if command is not None else None

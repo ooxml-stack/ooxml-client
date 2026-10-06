@@ -21,6 +21,11 @@ def _invalid_constant(value):
 
 
 def check_params(params):
+    """Validate outgoing parameters before any runtime process is started.
+
+    Raises ``ValueError`` for a non-object or non-finite JSON payload and
+    :class:`ClientError` when the encoded request exceeds the client limit.
+    """
     if not isinstance(params, dict):
         raise ValueError("params must be a JSON object.")
     try:
@@ -32,13 +37,21 @@ def check_params(params):
 
 
 def unpack(result):
+    """Return the operation payload from an MCP tool result.
+
+    Non-finite numbers, an oversized response and a missing structured payload
+    all raise :class:`ClientError` with the shared unknown-outcome wording: the
+    client cannot tell whether the runtime applied the edit.
+    """
     raw = result.model_dump(mode="json", by_alias=True, exclude_none=True)
     try:
         encoded = json.dumps(raw, allow_nan=False).encode("utf-8")
     except (TypeError, ValueError) as exc:
         raise ClientError("invalid_response", "Runtime returned non-finite JSON. " + UNKNOWN_OUTCOME) from exc
     if len(encoded) > MAX_RESPONSE_BYTES:
-        raise ClientError("response_too_large", "Decoded result exceeds the 16 MiB client limit. " + UNKNOWN_OUTCOME)
+        raise ClientError(
+            "response_too_large", "Decoded result exceeds the 16 MiB client limit. " + UNKNOWN_OUTCOME
+        )
     payload = result.structuredContent
     if payload is None and len(result.content) == 1 and result.content[0].type == "text":
         try:
@@ -52,13 +65,18 @@ def unpack(result):
     if result.isError:
         raise OperationError(payload if isinstance(payload, dict) else raw)
     if not isinstance(payload, dict):
-        raise ClientError("invalid_response", "Runtime did not return an Office JSON object. " + UNKNOWN_OUTCOME)
+        raise ClientError(
+            "invalid_response", "Runtime did not return an Office JSON object. " + UNKNOWN_OUTCOME
+        )
     return payload
 
 
 async def _request(command, method, params):
-    server = StdioServerParameters(command=command[0], args=command[1:],
-                                  env={**os.environ, "PYTHONUTF8": "1", "OOXML_MCP_PROFILE": "core"})
+    server = StdioServerParameters(
+        command=command[0],
+        args=command[1:],
+        env={**os.environ, "PYTHONUTF8": "1", "OOXML_MCP_PROFILE": "core"},
+    )
     with tempfile.TemporaryFile(mode="w+") as errors:
         async with stdio_client(server, errlog=errors) as (read, write):
             async with ClientSession(read, write) as session:
@@ -72,6 +90,12 @@ def _leaves(error):
 
 
 async def exchange(command, method, params, timeout):
+    """Run one MCP session call and map every failure to a stable error kind.
+
+    A timeout becomes ``runtime_timeout``, an OSError ``runtime_unavailable``
+    and an MCP protocol error ``runtime_transport``; all three carry the
+    unknown-outcome warning because the edit may or may not have been applied.
+    """
     try:
         result = await asyncio.wait_for(_request(command, method, params), timeout)
     except asyncio.TimeoutError as exc:
@@ -79,8 +103,12 @@ async def exchange(command, method, params, timeout):
     except Exception as exc:
         leaves = _leaves(exc)
         if any(isinstance(leaf, OSError) for leaf in leaves):
-            raise ClientError("runtime_unavailable", "Unable to use the configured runtime. " + UNKNOWN_OUTCOME) from exc
+            raise ClientError(
+                "runtime_unavailable", "Unable to use the configured runtime. " + UNKNOWN_OUTCOME
+            ) from exc
         protocol = next((leaf for leaf in leaves if isinstance(leaf, McpError)), None)
         details = protocol.error.model_dump(exclude_none=True) if protocol else None
-        raise ClientError("runtime_transport", "MCP session failed. " + UNKNOWN_OUTCOME, details=details) from exc
+        raise ClientError(
+            "runtime_transport", "MCP session failed. " + UNKNOWN_OUTCOME, details=details
+        ) from exc
     return unpack(result)

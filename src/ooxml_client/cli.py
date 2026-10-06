@@ -14,10 +14,16 @@ from .runtime import runtime_command
 
 
 def _parser():
-    parser = argparse.ArgumentParser(description="Office operations using a separately installed local Engine.")
+    parser = argparse.ArgumentParser(
+        description="Office operations using a separately installed local Engine."
+    )
     parser.add_argument("--version", action="version", version=__version__)
-    parser.add_argument("--runtime-python", help="Absolute Python executable path inside the licensed runtime")
-    parser.add_argument("--timeout", type=float, default=120, help="Per-operation timeout in seconds (default: 120)")
+    parser.add_argument(
+        "--runtime-python", help="Absolute Python executable path inside the licensed runtime"
+    )
+    parser.add_argument(
+        "--timeout", type=float, default=120, help="Per-operation timeout in seconds (default: 120)"
+    )
     commands = parser.add_subparsers(dest="command", required=True)
     for name in COMMANDS:
         command = commands.add_parser(name, help=f"Call ooxml_{name} with the runtime's JSON parameters")
@@ -38,6 +44,8 @@ def _params(args):
 
 
 def main(argv=None):
+    """Run the command-line entry point and return its exit status."""
+
     args = _parser().parse_args(argv)
     try:
         if args.command == "mcp":
