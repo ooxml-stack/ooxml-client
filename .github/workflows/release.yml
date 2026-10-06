@@ -13,7 +13,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@v7
@@ -24,7 +24,7 @@ jobs:
           uv venv --python 3.12 "$RUNNER_TEMP/verify"
           uv pip install --python "$RUNNER_TEMP/verify/bin/python" "$RUNNER_TEMP"/dist/*.whl
           "$RUNNER_TEMP/verify/bin/python" -c "import ooxml_client; print(ooxml_client.__version__)"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ooxml-client-dist
           path: ${{ runner.temp }}/dist
