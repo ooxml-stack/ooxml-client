@@ -6,7 +6,7 @@ test:
 	PYTHONPATH=src $(PYTHON) -m unittest discover -s tests -v
 
 lint:
-	$(PYTHON) -m ruff check src tests
+	python3 scripts/quality_gate.py ruff
 	python3 scripts/format_gate.py
 
 typecheck:
