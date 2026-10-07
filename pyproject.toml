@@ -5,16 +5,16 @@ description = "CLI and Python client for a separately installed local OOXML Engi
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
-dependencies = ["mcp>=1.29.1,<2"]
+dependencies = ["mcp>=1.29.1,<3"]
 
 [project.scripts]
 ooxml = "ooxml_client.cli:main"
 
 [project.optional-dependencies]
-dev = ["hatchling==1.29.0", "ruff==0.16.5", "tomli>=2,<3; python_version < '3.11'"]
+dev = ["hatchling==1.32.4", "ruff==0.16.10", "tomli>=2,<3; python_version < '3.11'"]
 
 [build-system]
-requires = ["hatchling==1.29.0"]
+requires = ["hatchling==1.32.4"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
