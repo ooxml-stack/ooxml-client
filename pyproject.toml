@@ -11,7 +11,7 @@ dependencies = ["mcp>=1.29.1,<2"]
 ooxml = "ooxml_client.cli:main"
 
 [project.optional-dependencies]
-dev = ["hatchling==1.29.0", "ruff==0.16.5"]
+dev = ["hatchling==1.29.0", "ruff==0.16.5", "tomli>=2,<3; python_version < '3.11'"]
 
 [build-system]
 requires = ["hatchling==1.29.0"]
