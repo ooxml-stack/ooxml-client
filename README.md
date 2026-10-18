@@ -26,6 +26,24 @@ The client does not download an Engine or grant a commercial runtime license.
 Without an authorized runtime installation, it cannot edit documents. The
 Engine distribution and its dependencies retain their own licenses.
 
+## Connect an agent (Claude Code / Codex)
+
+With an authorized runtime installed and `OOXML_RUNTIME_PYTHON` set, write the
+agent configuration and install the bundled skill (one-time config writes):
+
+```sh
+ooxml register claude     # or: ooxml register codex
+ooxml install-skill       # or: ooxml install-skill --target <project>/.claude/skills/ooxml/SKILL.md
+```
+
+`register` carries the configured runtime into the registration and refuses an
+existing `ooxml` server unless `--force` is given. `install-skill` refuses an
+existing SKILL.md unless `--force` is given. The skill takes effect in your
+next agent session; the registration carries `--runtime-python` so the spawned
+MCP server finds the runtime without extra environment.
+
+Then ask the agent: analyze /absolute/path/document.pptx
+
 ## Discover, read and edit
 
 Parameters and results use the Engine's existing JSON contracts. Discover the
