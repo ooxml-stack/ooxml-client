@@ -6,7 +6,7 @@ import os
 import sys
 from pathlib import Path
 
-from . import __version__
+from . import __version__, distribute
 from .client import COMMANDS, Client
 from .transport import _invalid_constant
 from .errors import ClientError
@@ -32,6 +32,16 @@ def _parser():
         inputs.add_argument("--params-file", type=Path, help="Read a UTF-8 JSON parameter object from a file")
     mcp = commands.add_parser("mcp", help="Run the installed Engine's MCP server over stdio")
     mcp.add_argument("--profile", choices=["core", "workflow"], default="core")
+    register = commands.add_parser("register", help="Register the MCP server with an agent application")
+    register.add_argument("agent", choices=["claude", "codex"])
+    register.add_argument("--scope", choices=["local", "project"], default="local", help="claude only")
+    register.add_argument("--force", action="store_true", help="Replace an existing ooxml registration")
+    register.add_argument("--dry-run", action="store_true", help="Print the write without performing it")
+    skill = commands.add_parser(
+        "install-skill", help="Copy the bundled SKILL.md where your agent discovers skills"
+    )
+    skill.add_argument("--target", type=Path, default=None, help="Explicit SKILL.md path")
+    skill.add_argument("--force", action="store_true", help="Overwrite an existing SKILL.md")
     return parser
 
 
@@ -52,8 +62,19 @@ def main(argv=None):
             command = runtime_command(args.runtime_python)
             os.environ["OOXML_MCP_PROFILE"] = args.profile
             os.execv(command[0], command)
-        client = Client(args.runtime_python, timeout=args.timeout)
-        result = client.call("ooxml_" + args.command, _params(args))
+        if args.command == "register":
+            result = distribute.register(
+                args.agent,
+                scope=args.scope,
+                force=args.force,
+                dry_run=args.dry_run,
+                runtime_python=args.runtime_python or os.environ.get("OOXML_RUNTIME_PYTHON"),
+            )
+        elif args.command == "install-skill":
+            result = distribute.install_skill(args.target, force=args.force)
+        else:
+            client = Client(args.runtime_python, timeout=args.timeout)
+            result = client.call("ooxml_" + args.command, _params(args))
         print(json.dumps(result, ensure_ascii=False, allow_nan=False))
         return 0
     except ClientError as exc:
