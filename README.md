@@ -13,7 +13,11 @@ python -m pip install git+https://github.com/ooxml-stack/ooxml-client.git
 ```
 
 Python 3.10 or newer is required for the client. Use the interpreter version
-required by your Engine distribution for the Engine itself.
+required by your Engine distribution for the Engine itself. The client depends
+on the public MCP Python SDK (`mcp`); on a networked machine pip resolves it
+from PyPI automatically. For an air-gapped install, build a wheelhouse first
+(`pip download -d wheelhouse ./ooxml_client-*.whl`) and install with
+`pip install --no-index --find-links wheelhouse ./ooxml_client-*.whl`.
 
 Install your separately supplied Engine distribution, then set its Python
 executable path. Keep that environment separate from the client environment:
@@ -41,6 +45,11 @@ existing `ooxml` server unless `--force` is given. `install-skill` refuses an
 existing SKILL.md unless `--force` is given. The skill takes effect in your
 next agent session; the registration carries `--runtime-python` so the spawned
 MCP server finds the runtime without extra environment.
+
+`--runtime-python` is a global option and must come **before** the subcommand
+(`ooxml --runtime-python /path register claude`); placing it after the
+subcommand is an argparse error. `register` also reads `OOXML_RUNTIME_PYTHON`
+from the environment when the option is absent.
 
 Then ask the agent: analyze /absolute/path/document.pptx
 
