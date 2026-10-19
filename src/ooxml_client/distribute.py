@@ -15,6 +15,7 @@ from .errors import ClientError
 
 CODEX_CONFIG = Path.home() / ".codex" / "config.toml"
 CLAUDE_SKILLS = Path.home() / ".claude" / "skills"
+LICENSE_DIR = Path.home() / ".ooxml"
 MCP_ARGS = ["mcp", "--profile", "core"]
 SERVER_NAME = "ooxml"
 
@@ -182,3 +183,20 @@ def install_skill(target=None, force=False):
     except OSError as exc:
         raise ClientError("skill_write_failed", f"Could not write {path}: {exc}") from exc
     return {"skill": str(path.resolve()), "next": ["The skill takes effect in your next agent session."]}
+
+
+def activate(license_file):
+    """Install a delivery license file (keyless copy; the gate verifies it)."""
+    source = Path(license_file).expanduser()
+    if not source.exists():
+        raise _exists_error("license_missing", f"{source} does not exist.")
+    target = LICENSE_DIR / "license.json"
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+    except OSError as exc:
+        raise ClientError("license_write_failed", f"Could not write {target}: {exc}") from exc
+    return {
+        "license": str(target.resolve()),
+        "next": ["The license gate allows serving on the next command."],
+    }

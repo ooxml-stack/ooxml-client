@@ -42,6 +42,8 @@ def _parser():
     )
     skill.add_argument("--target", type=Path, default=None, help="Explicit SKILL.md path")
     skill.add_argument("--force", action="store_true", help="Overwrite an existing SKILL.md")
+    act = commands.add_parser("activate", help="Install a delivery license file")
+    act.add_argument("--license", type=Path, required=True, help="Path to the license file")
     return parser
 
 
@@ -72,6 +74,8 @@ def main(argv=None):
             )
         elif args.command == "install-skill":
             result = distribute.install_skill(args.target, force=args.force)
+        elif args.command == "activate":
+            result = distribute.activate(args.license)
         else:
             client = Client(args.runtime_python, timeout=args.timeout)
             result = client.call("ooxml_" + args.command, _params(args))

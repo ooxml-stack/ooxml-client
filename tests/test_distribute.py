@@ -142,5 +142,33 @@ class CliWiringTests(unittest.TestCase):
             self.assertIn("skill_exists", errors.getvalue())
 
 
+class ActivateTests(unittest.TestCase):
+    def test_activate_copies_license_into_place(self):
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder) / "acme.lic"
+            source.write_text('{"licensee": "Acme"}', encoding="utf-8")
+            with patch.object(distribute, "LICENSE_DIR", Path(folder) / "state"):
+                result = distribute.activate(source)
+            target = Path(folder) / "state" / "license.json"
+            self.assertEqual(result["license"], str(target.resolve()))
+            self.assertIn("Acme", target.read_text(encoding="utf-8"))
+
+    def test_activate_refuses_missing_file(self):
+        with tempfile.TemporaryDirectory() as folder:
+            with self.assertRaises(ValueError):
+                distribute.activate(Path(folder) / "nope.lic")
+
+    def test_activate_via_cli(self):
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder) / "acme.lic"
+            source.write_text("{}", encoding="utf-8")
+            with patch.object(distribute, "LICENSE_DIR", Path(folder) / "state"):
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    code = main(["activate", "--license", str(source)])
+            self.assertEqual(code, 0)
+            self.assertIn("license.json", out.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()
