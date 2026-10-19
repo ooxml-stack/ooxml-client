@@ -5,13 +5,15 @@ only write agent configuration and copy the bundled skill; they never import
 the runtime or touch document content.
 """
 
+import json
 import shutil
 import subprocess
 import sys
 from importlib.resources import files
 from pathlib import Path
 
-from .errors import ClientError
+from .client import Client
+from .errors import ClientError, OperationError
 
 CODEX_CONFIG = Path.home() / ".codex" / "config.toml"
 CLAUDE_SKILLS = Path.home() / ".claude" / "skills"
@@ -183,6 +185,43 @@ def install_skill(target=None, force=False):
     except OSError as exc:
         raise ClientError("skill_write_failed", f"Could not write {path}: {exc}") from exc
     return {"skill": str(path.resolve()), "next": ["The skill takes effect in your next agent session."]}
+
+
+def _installed_license(path):
+    """Read the installed delivery license's artifact binding, keyless."""
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return {}
+    artifact = payload.get("artifact_id") if isinstance(payload, dict) else None
+    return {"artifact_id": str(artifact)} if isinstance(artifact, str) and artifact else {}
+
+
+def _serving_state(runtime_python):
+    """Probe the runtime with one keyless stateless call (no document)."""
+    try:
+        Client(runtime_python).call("ooxml_man", {"topic": "operations", "output": "summary"})
+    except ClientError as exc:
+        return exc.kind
+    except (ValueError, OSError):
+        return "runtime_unavailable"
+    return "active"
+
+
+def status(runtime_python=None):
+    """Report the installed license state and the runtime's serving state.
+
+    ``installed`` and ``artifact_id`` come from the keyless copy under
+    ``~/.ooxml``; ``serving`` probes the runtime once with a document-free
+    call so the answer reflects the gate's real decision, never a guess.
+    """
+    path = LICENSE_DIR / "license.json"
+    result = {"license": str(path), "installed": path.exists()}
+    result.update(_installed_license(path))
+    result["serving"] = _serving_state(runtime_python)
+    return result
 
 
 def activate(license_file):

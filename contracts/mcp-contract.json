@@ -1,0 +1,42 @@
+{
+  "contract_version": "1",
+  "product": "ooxml",
+  "local_only": true,
+  "execution_guarantee": "All MCP execution runs on the customer Mac over stdio. There is no remote MCP and documents are never uploaded.",
+  "default_mcp": {
+    "name": "ooxml",
+    "command": "ooxml mcp --profile core",
+    "tool_count": 8,
+    "tool_names": [
+      "ooxml_man",
+      "ooxml_inspect",
+      "ooxml_locate",
+      "ooxml_view",
+      "ooxml_apply",
+      "ooxml_validate",
+      "ooxml_diff",
+      "ooxml_render"
+    ]
+  },
+  "workflow_mcp": {
+    "name": "ooxml-workflow",
+    "command": "ooxml mcp --profile workflow",
+    "tool_count": 10,
+    "tool_names": [
+      "ooxml_template_extract_submit",
+      "ooxml_template_apply_submit",
+      "ooxml_template_job_decide",
+      "ooxml_template_job_accept",
+      "ooxml_template_job_status",
+      "ooxml_template_job_artifacts",
+      "ooxml_template_job_verify",
+      "ooxml_policy_plan",
+      "ooxml_text_replace_plan",
+      "ooxml_report"
+    ]
+  },
+  "tool_schemas": "Stable references: initialize then tools/list returns the exact schemas; tool names and counts are pinned by this contract, schemas by the returned reference.",
+  "required_client_range": ">=0.1.50,<0.2.0",
+  "required_runtime_artifact": "ooxml-operation-engine-b1181f42-macosx_14_0-arm64-b2",
+  "license_states": ["license_missing", "installed", "active"]
+}

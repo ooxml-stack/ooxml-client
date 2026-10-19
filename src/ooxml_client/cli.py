@@ -44,6 +44,7 @@ def _parser():
     skill.add_argument("--force", action="store_true", help="Overwrite an existing SKILL.md")
     act = commands.add_parser("activate", help="Install a delivery license file")
     act.add_argument("--license", type=Path, required=True, help="Path to the license file")
+    commands.add_parser("status", help="Report the installed license and serving state")
     return parser
 
 
@@ -76,6 +77,8 @@ def main(argv=None):
             result = distribute.install_skill(args.target, force=args.force)
         elif args.command == "activate":
             result = distribute.activate(args.license)
+        elif args.command == "status":
+            result = distribute.status(args.runtime_python or os.environ.get("OOXML_RUNTIME_PYTHON"))
         else:
             client = Client(args.runtime_python, timeout=args.timeout)
             result = client.call("ooxml_" + args.command, _params(args))
