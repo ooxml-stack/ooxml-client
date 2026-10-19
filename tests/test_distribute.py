@@ -73,6 +73,26 @@ class RegisterTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 distribute.register_claude()
 
+    def test_codex_block_escapes_windows_launchers(self):
+        block = distribute._codex_block([r"C:\Users\dev\bin\ooxml.exe"])
+        self.assertIn('command = "C:\\\\Users\\\\dev\\\\bin\\\\ooxml.exe"', block)
+        block2 = distribute._codex_block(["/abs/bin/ooxml"])
+        self.assertNotIn("\\\\", block2)
+
+    def test_claude_listed_matches_only_the_exact_server_name(self):
+        listed = distribute._claude_listed
+        class Run:
+            def __init__(self, stdout):
+                self.stdout = stdout
+        with patch.object(distribute.shutil, "which", return_value="/fake/claude"), patch.object(
+            distribute.subprocess, "run", return_value=Run("ooxml-foo (local)\nother-server\n")
+        ):
+            self.assertFalse(listed("/fake/claude"))
+        with patch.object(distribute.shutil, "which", return_value="/fake/claude"), patch.object(
+            distribute.subprocess, "run", return_value=Run("ooxml (local)\n")
+        ):
+            self.assertTrue(listed("/fake/claude"))
+
     def test_codex_appends_block_and_refuses_duplicate(self):
         with tempfile.TemporaryDirectory() as folder:
             config = Path(folder) / "config.toml"

@@ -61,12 +61,20 @@ def _claude_binary():
 
 
 def _claude_listed(claude):
-    """Best-effort duplicate check before touching the agent configuration."""
+    """Best-effort duplicate check before touching the agent configuration.
+
+    Matches only the exact server name (``ooxml`` or ``ooxml:``) so a
+    differently named server such as ``ooxml-foo`` never causes a refusal.
+    """
     try:
         result = subprocess.run([claude, "mcp", "list"], capture_output=True, text=True, timeout=30)
     except (OSError, subprocess.TimeoutExpired):
         return False
-    return any(line.strip().startswith(SERVER_NAME) for line in result.stdout.splitlines())
+    for line in result.stdout.splitlines():
+        tokens = line.strip().split()
+        if tokens and tokens[0].rstrip(":") == SERVER_NAME:
+            return True
+    return False
 
 
 def register_claude(scope="local", force=False, dry_run=False, runtime_python=None):
@@ -112,7 +120,9 @@ def _codex_block(launcher_parts):
     command = launcher_parts[0]
     args = launcher_parts[1:]
     quoted = ", ".join(f'"{arg}"' for arg in args)
-    escaped = command.replace('"', '\\"')
+    # Backslash first, then quote: Windows launchers like C:\...\bin\ooxml.exe
+    # must survive as valid TOML basic strings.
+    escaped = command.replace("\\", "\\\\").replace('"', '\\"')
     return f"\n[mcp_servers.{SERVER_NAME}]\ncommand = \"{escaped}\"\nargs = [{quoted}]\n"
 
 
