@@ -10,6 +10,7 @@ from . import __version__, distribute
 from .client import COMMANDS, Client
 from .transport import _invalid_constant
 from .errors import ClientError
+from .probe import run_probe
 from .runtime import runtime_command
 from .status import status as runtime_status
 
@@ -34,6 +35,9 @@ def _parser():
         inputs.add_argument("--params-file", type=Path, help="Read a UTF-8 JSON parameter object from a file")
     mcp = commands.add_parser("mcp", help="Run the installed Engine's MCP server over stdio")
     mcp.add_argument("--profile", choices=["core", "workflow"], default="core")
+    probe = commands.add_parser("probe", help="Probe an MCP profile through the packaged runtime")
+    probe.add_argument("--profile", choices=["core", "workflow"], required=True)
+    probe.add_argument("--sample", type=Path, help="Workflow probe source document")
     register = commands.add_parser("register", help="Register the MCP server with an agent application")
     register.add_argument("agent", choices=["claude", "codex"])
     register.add_argument("--scope", choices=["local", "project"], default="local", help="claude only")
@@ -80,6 +84,13 @@ def main(argv=None):
             result = distribute.install_skill(args.target, force=args.force)
         elif args.command == "activate":
             result = distribute.activate(args.license)
+        elif args.command == "probe":
+            result = run_probe(
+                args.profile,
+                sample=str(args.sample) if args.sample else None,
+                runtime_python=args.runtime_python,
+                runtime_executable=args.runtime_executable,
+            )
         elif args.command == "status":
             result = runtime_status(
                 args.runtime_python,

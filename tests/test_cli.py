@@ -73,6 +73,15 @@ class CliTests(unittest.TestCase):
             self.assertEqual(command[0], str(path))
             self.assertEqual(command[1:], ["serve", "--transport", "stdio"])
 
+    def test_probe_uses_packaged_runtime_helper(self):
+        with patch("ooxml_client.cli.run_probe", return_value={"tool_count": 8}) as probe:
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                code = main(["probe", "--profile", "core"])
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(output.getvalue()), {"tool_count": 8})
+        probe.assert_called_once()
+
     def test_mcp_executes_the_real_server_without_tool_reimplementation(self):
         class Executed(Exception):
             pass
