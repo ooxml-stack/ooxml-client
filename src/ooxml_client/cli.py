@@ -36,7 +36,7 @@ def _parser():
     mcp = commands.add_parser("mcp", help="Run the installed Engine's MCP server over stdio")
     mcp.add_argument("--profile", choices=["core", "workflow"], default="core")
     probe = commands.add_parser("probe", help="Probe an MCP profile through the packaged runtime")
-    probe.add_argument("--profile", choices=["core", "workflow"], required=True)
+    probe.add_argument("--profile", choices=["core", "workflow", "pdf"], required=True)
     probe.add_argument("--sample", type=Path, help="Workflow probe source document")
     register = commands.add_parser("register", help="Register the MCP server with an agent application")
     register.add_argument("agent", choices=["claude", "codex"])

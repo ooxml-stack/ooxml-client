@@ -82,6 +82,15 @@ class CliTests(unittest.TestCase):
         self.assertEqual(json.loads(output.getvalue()), {"tool_count": 8})
         probe.assert_called_once()
 
+    def test_pdf_probe_returns_stable_unavailable_contract(self):
+        from ooxml_client.probe import pdf_readability_contract
+
+        result = pdf_readability_contract()
+        self.assertEqual(result["profile"], "pdf")
+        self.assertIn("available", result)
+        if not result["available"]:
+            self.assertEqual(result["error"]["code"], "pdf_readability_unavailable")
+
     def test_mcp_executes_the_real_server_without_tool_reimplementation(self):
         class Executed(Exception):
             pass

@@ -18,8 +18,10 @@ async def probe(
     runtime_python: str | None = None,
     runtime_executable: str | None = None,
 ) -> dict:
+    if profile == "pdf":
+        return pdf_readability_contract()
     if profile not in {"core", "workflow"}:
-        raise ValueError("profile must be core or workflow")
+        raise ValueError("profile must be core, workflow, or pdf")
     if profile == "workflow" and not sample:
         raise ValueError("workflow probe requires --sample")
     command = runtime_command(runtime_python, runtime_executable)
@@ -53,6 +55,22 @@ async def probe(
         "call_is_error": bool(call.isError),
         "call_structured": bool(call.structuredContent),
     }
+
+
+def pdf_readability_contract() -> dict:
+    try:
+        import fitz  # noqa: F401
+    except (ImportError, ModuleNotFoundError):
+        return {
+            "profile": "pdf",
+            "available": False,
+            "error": {
+                "code": "pdf_readability_unavailable",
+                "message": "PDF readability verification is unavailable in this runtime.",
+                "recovery": "Use structural Office validation; do not retry an optional dependency import.",
+            },
+        }
+    return {"profile": "pdf", "available": True, "error": None}
 
 
 def run_probe(profile: str, **kwargs) -> dict:
