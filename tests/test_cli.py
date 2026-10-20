@@ -18,7 +18,11 @@ from ooxml_client.runtime import runtime_command
 class CliTests(unittest.TestCase):
     def test_missing_runtime_is_a_nonzero_json_error(self):
         output, errors = io.StringIO(), io.StringIO()
-        with patch.dict(os.environ, {}, clear=True), contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            contextlib.redirect_stdout(output),
+            contextlib.redirect_stderr(errors),
+        ):
             code = main(["man"])
         self.assertEqual(code, 1)
         self.assertEqual(output.getvalue(), "")
@@ -53,9 +57,26 @@ class CliTests(unittest.TestCase):
             command = runtime_command(path)
             self.assertEqual(command[:4], [str(path), "-I", "-B", "-m"])
 
+    def test_native_runtime_path_is_preserved_and_uses_serve_stdio(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "ooxml-engine"
+            path.symlink_to(sys.executable)
+            command = runtime_command(runtime_executable=path)
+            self.assertEqual(command, [str(path), "serve", "--transport", "stdio"])
+
+    def test_native_runtime_environment_is_supported(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "ooxml-engine"
+            path.symlink_to(sys.executable)
+            with patch.dict(os.environ, {"OOXML_RUNTIME_EXECUTABLE": str(path)}, clear=True):
+                command = runtime_command()
+            self.assertEqual(command[0], str(path))
+            self.assertEqual(command[1:], ["serve", "--transport", "stdio"])
+
     def test_mcp_executes_the_real_server_without_tool_reimplementation(self):
         class Executed(Exception):
             pass
+
         with patch.dict(os.environ, {}, clear=True), patch("os.execv", side_effect=Executed) as execute:
             with self.assertRaises(Executed):
                 main(["--runtime-python", sys.executable, "mcp", "--profile", "workflow"])

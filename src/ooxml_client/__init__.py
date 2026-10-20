@@ -4,4 +4,4 @@ from .client import Client
 from .errors import ClientError, OperationError
 
 __all__ = ["Client", "ClientError", "OperationError"]
-__version__ = "0.1.0"
+__version__ = "0.1.52"

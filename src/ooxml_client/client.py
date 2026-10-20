@@ -17,12 +17,13 @@ class Client:
         self,
         runtime_python: str | None = None,
         *,
+        runtime_executable: str | None = None,
         command: Sequence[str] | None = None,
         timeout: float = 120,
     ) -> None:
-        """Configure a client for a runtime Python path or explicit MCP command."""
-        if runtime_python is not None and command is not None:
-            raise ValueError("Choose runtime_python or command, not both.")
+        """Configure a native/Python runtime path or explicit MCP command."""
+        if sum(value is not None for value in (runtime_python, runtime_executable, command)) > 1:
+            raise ValueError("Choose only one of runtime_python, runtime_executable, or command.")
         if (
             isinstance(timeout, bool)
             or not isinstance(timeout, (int, float))
@@ -38,6 +39,7 @@ class Client:
             ):
                 raise ValueError("command must be a nonempty list of nonempty arguments.")
         self.runtime_python = runtime_python
+        self.runtime_executable = runtime_executable
         self.command = list(command) if command is not None else None
         self.timeout = timeout
 
@@ -55,7 +57,7 @@ class Client:
             raise ValueError("Only the eight stateless core operations are supported by this client.")
         params = {} if params is None else params
         check_params(params)
-        command = self.command or runtime_command(self.runtime_python)
+        command = self.command or runtime_command(self.runtime_python, self.runtime_executable)
         return await exchange(command, method, params, self.timeout)
 
     def man(self, **params: Any) -> Any:

@@ -45,8 +45,9 @@ class InstallSkillTests(unittest.TestCase):
 
 class RegisterTests(unittest.TestCase):
     def test_claude_dry_run_prints_command_without_executing(self):
-        with patch.object(distribute.shutil, "which", return_value="/fake/claude"), patch.object(
-            distribute, "_claude_listed", return_value=False
+        with (
+            patch.object(distribute.shutil, "which", return_value="/fake/claude"),
+            patch.object(distribute, "_claude_listed", return_value=False),
         ):
             result = distribute.register_claude(dry_run=True)
         self.assertTrue(result["dry_run"])
@@ -55,11 +56,20 @@ class RegisterTests(unittest.TestCase):
         self.assertEqual(result["command"][-1], "core")
 
     def test_runtime_python_is_carried_into_the_registration(self):
-        with patch.object(distribute.shutil, "which", return_value="/fake/claude"), patch.object(
-            distribute, "_claude_listed", return_value=False
+        with (
+            patch.object(distribute.shutil, "which", return_value="/fake/claude"),
+            patch.object(distribute, "_claude_listed", return_value=False),
         ):
             result = distribute.register_claude(dry_run=True, runtime_python="/abs/bin/python")
         self.assertIn("--runtime-python=/abs/bin/python", result["command"])
+
+    def test_native_runtime_is_carried_into_the_registration(self):
+        with (
+            patch.object(distribute.shutil, "which", return_value="/fake/claude"),
+            patch.object(distribute, "_claude_listed", return_value=False),
+        ):
+            result = distribute.register_claude(dry_run=True, runtime_executable="/abs/ooxml-engine")
+        self.assertIn("--runtime-executable=/abs/ooxml-engine", result["command"])
 
     def test_claude_missing_binary_fails(self):
         with patch.object(distribute.shutil, "which", return_value=None):
@@ -67,8 +77,9 @@ class RegisterTests(unittest.TestCase):
                 distribute.register_claude(dry_run=True)
 
     def test_claude_existing_server_is_refused(self):
-        with patch.object(distribute.shutil, "which", return_value="/fake/claude"), patch.object(
-            distribute, "_claude_listed", return_value=True
+        with (
+            patch.object(distribute.shutil, "which", return_value="/fake/claude"),
+            patch.object(distribute, "_claude_listed", return_value=True),
         ):
             with self.assertRaises(ValueError):
                 distribute.register_claude()
@@ -81,23 +92,28 @@ class RegisterTests(unittest.TestCase):
 
     def test_claude_listed_matches_only_the_exact_server_name(self):
         listed = distribute._claude_listed
+
         class Run:
             def __init__(self, stdout):
                 self.stdout = stdout
-        with patch.object(distribute.shutil, "which", return_value="/fake/claude"), patch.object(
-            distribute.subprocess, "run", return_value=Run("ooxml-foo (local)\nother-server\n")
+
+        with (
+            patch.object(distribute.shutil, "which", return_value="/fake/claude"),
+            patch.object(distribute.subprocess, "run", return_value=Run("ooxml-foo (local)\nother-server\n")),
         ):
             self.assertFalse(listed("/fake/claude"))
-        with patch.object(distribute.shutil, "which", return_value="/fake/claude"), patch.object(
-            distribute.subprocess, "run", return_value=Run("ooxml (local)\n")
+        with (
+            patch.object(distribute.shutil, "which", return_value="/fake/claude"),
+            patch.object(distribute.subprocess, "run", return_value=Run("ooxml (local)\n")),
         ):
             self.assertTrue(listed("/fake/claude"))
 
     def test_codex_appends_block_and_refuses_duplicate(self):
         with tempfile.TemporaryDirectory() as folder:
             config = Path(folder) / "config.toml"
-            with patch.object(distribute, "CODEX_CONFIG", config), patch.object(
-                distribute.shutil, "which", return_value=None
+            with (
+                patch.object(distribute, "CODEX_CONFIG", config),
+                patch.object(distribute.shutil, "which", return_value=None),
             ):
                 result = distribute.register_codex()
                 text = config.read_text(encoding="utf-8")
@@ -124,9 +140,11 @@ class CliWiringTests(unittest.TestCase):
 
     def test_register_dry_run_via_cli(self):
         output = io.StringIO()
-        with patch.object(distribute.shutil, "which", return_value="/fake/claude"), patch.object(
-            distribute, "_claude_listed", return_value=False
-        ), contextlib.redirect_stdout(output):
+        with (
+            patch.object(distribute.shutil, "which", return_value="/fake/claude"),
+            patch.object(distribute, "_claude_listed", return_value=False),
+            contextlib.redirect_stdout(output),
+        ):
             code = main(["register", "claude", "--dry-run"])
         self.assertEqual(code, 0)
         self.assertTrue(json.loads(output.getvalue())["dry_run"])

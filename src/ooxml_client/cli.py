@@ -11,6 +11,7 @@ from .client import COMMANDS, Client
 from .transport import _invalid_constant
 from .errors import ClientError
 from .runtime import runtime_command
+from .status import status as runtime_status
 
 
 def _parser():
@@ -21,6 +22,7 @@ def _parser():
     parser.add_argument(
         "--runtime-python", help="Absolute Python executable path inside the licensed runtime"
     )
+    parser.add_argument("--runtime-executable", help="Absolute path to the native ooxml-engine executable")
     parser.add_argument(
         "--timeout", type=float, default=120, help="Per-operation timeout in seconds (default: 120)"
     )
@@ -44,6 +46,7 @@ def _parser():
     skill.add_argument("--force", action="store_true", help="Overwrite an existing SKILL.md")
     act = commands.add_parser("activate", help="Install a delivery license file")
     act.add_argument("--license", type=Path, required=True, help="Path to the license file")
+    commands.add_parser("status", help="Report activation and real runtime serving status")
     return parser
 
 
@@ -61,7 +64,7 @@ def main(argv=None):
     args = _parser().parse_args(argv)
     try:
         if args.command == "mcp":
-            command = runtime_command(args.runtime_python)
+            command = runtime_command(args.runtime_python, args.runtime_executable)
             os.environ["OOXML_MCP_PROFILE"] = args.profile
             os.execv(command[0], command)
         if args.command == "register":
@@ -71,13 +74,24 @@ def main(argv=None):
                 force=args.force,
                 dry_run=args.dry_run,
                 runtime_python=args.runtime_python or os.environ.get("OOXML_RUNTIME_PYTHON"),
+                runtime_executable=args.runtime_executable or os.environ.get("OOXML_RUNTIME_EXECUTABLE"),
             )
         elif args.command == "install-skill":
             result = distribute.install_skill(args.target, force=args.force)
         elif args.command == "activate":
             result = distribute.activate(args.license)
+        elif args.command == "status":
+            result = runtime_status(
+                args.runtime_python,
+                args.runtime_executable,
+                timeout=args.timeout,
+            )
         else:
-            client = Client(args.runtime_python, timeout=args.timeout)
+            client = Client(
+                args.runtime_python,
+                runtime_executable=args.runtime_executable,
+                timeout=args.timeout,
+            )
             result = client.call("ooxml_" + args.command, _params(args))
         print(json.dumps(result, ensure_ascii=False, allow_nan=False))
         return 0

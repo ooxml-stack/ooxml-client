@@ -28,9 +28,11 @@ def launcher():
     return [sys.executable, "-m", "ooxml_client"]
 
 
-def _mcp_command(runtime_python=None):
-    """The `ooxml mcp` invocation, resolving the runtime when one is known."""
+def _mcp_command(runtime_python=None, runtime_executable=None):
+    """The ooxml mcp invocation, carrying an explicit runtime when supplied."""
     parts = launcher()
+    if runtime_executable:
+        parts.append(f"--runtime-executable={runtime_executable}")
     if runtime_python:
         parts.append(f"--runtime-python={runtime_python}")
     return parts + MCP_ARGS
@@ -45,12 +47,23 @@ def _exists_error(kind, message):
     return ValueError(f"{kind}: {message}")
 
 
-def register(agent, scope="local", force=False, dry_run=False, runtime_python=None):
+def register(agent, scope="local", force=False, dry_run=False, runtime_python=None, runtime_executable=None):
     """Write MCP registration for ``claude`` or ``codex`` and return its result."""
     if agent == "claude":
-        return register_claude(scope=scope, force=force, dry_run=dry_run, runtime_python=runtime_python)
+        return register_claude(
+            scope=scope,
+            force=force,
+            dry_run=dry_run,
+            runtime_python=runtime_python,
+            runtime_executable=runtime_executable,
+        )
     if agent == "codex":
-        return register_codex(force=force, dry_run=dry_run, runtime_python=runtime_python)
+        return register_codex(
+            force=force,
+            dry_run=dry_run,
+            runtime_python=runtime_python,
+            runtime_executable=runtime_executable,
+        )
     raise _exists_error("agent_unknown", f"Unknown agent {agent!r}; expected 'claude' or 'codex'.")
 
 
@@ -78,9 +91,9 @@ def _claude_listed(claude):
     return False
 
 
-def register_claude(scope="local", force=False, dry_run=False, runtime_python=None):
+def register_claude(scope="local", force=False, dry_run=False, runtime_python=None, runtime_executable=None):
     claude = _claude_binary()
-    command = _claude_add_command(claude, scope, runtime_python)
+    command = _claude_add_command(claude, scope, runtime_python, runtime_executable)
     if not force and _claude_listed(claude):
         raise _exists_error(
             "server_exists", "An 'ooxml' MCP server already exists; use --force to replace it."
@@ -102,7 +115,7 @@ def register_claude(scope="local", force=False, dry_run=False, runtime_python=No
     }
 
 
-def _claude_add_command(claude, scope, runtime_python=None):
+def _claude_add_command(claude, scope, runtime_python=None, runtime_executable=None):
     return [
         claude,
         "mcp",
@@ -113,7 +126,7 @@ def _claude_add_command(claude, scope, runtime_python=None):
         scope,
         SERVER_NAME,
         "--",
-        *_mcp_command(runtime_python),
+        *_mcp_command(runtime_python, runtime_executable),
     ]
 
 
@@ -124,7 +137,7 @@ def _codex_block(launcher_parts):
     # Backslash first, then quote: Windows launchers like C:\...\bin\ooxml.exe
     # must survive as valid TOML basic strings.
     escaped = command.replace("\\", "\\\\").replace('"', '\\"')
-    return f"\n[mcp_servers.{SERVER_NAME}]\ncommand = \"{escaped}\"\nargs = [{quoted}]\n"
+    return f'\n[mcp_servers.{SERVER_NAME}]\ncommand = "{escaped}"\nargs = [{quoted}]\n'
 
 
 def _without_block(existing):
@@ -144,8 +157,8 @@ def _without_block(existing):
     return "".join(out)
 
 
-def register_codex(force=False, dry_run=False, runtime_python=None):
-    block = _codex_block(_mcp_command(runtime_python))
+def register_codex(force=False, dry_run=False, runtime_python=None, runtime_executable=None):
+    block = _codex_block(_mcp_command(runtime_python, runtime_executable))
     path = CODEX_CONFIG
     existing = path.read_text(encoding="utf-8") if path.exists() else ""
     if not force and f"[mcp_servers.{SERVER_NAME}]" in existing:
