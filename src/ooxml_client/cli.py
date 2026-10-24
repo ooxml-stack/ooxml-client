@@ -33,6 +33,11 @@ def _parser():
         inputs = command.add_mutually_exclusive_group()
         inputs.add_argument("--params", default=None, help="JSON object of runtime parameters")
         inputs.add_argument("--params-file", type=Path, help="Read a UTF-8 JSON parameter object from a file")
+    commands.choices["validate"].add_argument(
+        "--strict",
+        action="store_true",
+        help="Exit 1 when the validation result reports failure",
+    )
     mcp = commands.add_parser("mcp", help="Run the installed Engine's MCP server over stdio")
     mcp.add_argument("--profile", choices=["core", "workflow"], default="core")
     probe = commands.add_parser("probe", help="Probe an MCP profile through the packaged runtime")
@@ -105,6 +110,10 @@ def main(argv=None):
             )
             result = client.call("ooxml_" + args.command, _params(args))
         print(json.dumps(result, ensure_ascii=False, allow_nan=False))
+        if args.command == "validate" and args.strict:
+            if result.get("passed") is False or result.get("status") == "failed":
+                print("Validation reported failure.", file=sys.stderr)
+                return 1
         return 0
     except ClientError as exc:
         print(json.dumps({"error": exc.as_dict()}), file=sys.stderr)
