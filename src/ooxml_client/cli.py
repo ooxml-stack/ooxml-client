@@ -67,6 +67,37 @@ def _params(args):
     return result
 
 
+def _dispatch(args):
+    if args.command == "register":
+        return distribute.register(
+            args.agent,
+            scope=args.scope,
+            force=args.force,
+            dry_run=args.dry_run,
+            runtime_python=args.runtime_python or os.environ.get("OOXML_RUNTIME_PYTHON"),
+            runtime_executable=args.runtime_executable or os.environ.get("OOXML_RUNTIME_EXECUTABLE"),
+        )
+    if args.command == "install-skill":
+        return distribute.install_skill(args.target, force=args.force)
+    if args.command == "activate":
+        return distribute.activate(args.license)
+    if args.command == "probe":
+        return run_probe(
+            args.profile,
+            sample=str(args.sample) if args.sample else None,
+            runtime_python=args.runtime_python,
+            runtime_executable=args.runtime_executable,
+        )
+    if args.command == "status":
+        return runtime_status(args.runtime_python, args.runtime_executable, timeout=args.timeout)
+    client = Client(
+        args.runtime_python,
+        runtime_executable=args.runtime_executable,
+        timeout=args.timeout,
+    )
+    return client.call("ooxml_" + args.command, _params(args))
+
+
 def main(argv=None):
     """Run the command-line entry point and return its exit status."""
 
@@ -76,44 +107,15 @@ def main(argv=None):
             command = runtime_command(args.runtime_python, args.runtime_executable)
             os.environ["OOXML_MCP_PROFILE"] = args.profile
             os.execv(command[0], command)
-        if args.command == "register":
-            result = distribute.register(
-                args.agent,
-                scope=args.scope,
-                force=args.force,
-                dry_run=args.dry_run,
-                runtime_python=args.runtime_python or os.environ.get("OOXML_RUNTIME_PYTHON"),
-                runtime_executable=args.runtime_executable or os.environ.get("OOXML_RUNTIME_EXECUTABLE"),
-            )
-        elif args.command == "install-skill":
-            result = distribute.install_skill(args.target, force=args.force)
-        elif args.command == "activate":
-            result = distribute.activate(args.license)
-        elif args.command == "probe":
-            result = run_probe(
-                args.profile,
-                sample=str(args.sample) if args.sample else None,
-                runtime_python=args.runtime_python,
-                runtime_executable=args.runtime_executable,
-            )
-        elif args.command == "status":
-            result = runtime_status(
-                args.runtime_python,
-                args.runtime_executable,
-                timeout=args.timeout,
-            )
-        else:
-            client = Client(
-                args.runtime_python,
-                runtime_executable=args.runtime_executable,
-                timeout=args.timeout,
-            )
-            result = client.call("ooxml_" + args.command, _params(args))
+        result = _dispatch(args)
         print(json.dumps(result, ensure_ascii=False, allow_nan=False))
-        if args.command == "validate" and args.strict:
-            if result.get("passed") is False or result.get("status") == "failed":
-                print("Validation reported failure.", file=sys.stderr)
-                return 1
+        if (
+            args.command == "validate"
+            and args.strict
+            and (result.get("passed") is False or result.get("status") == "failed")
+        ):
+            print("Validation reported failure.", file=sys.stderr)
+            return 1
         return 0
     except ClientError as exc:
         print(json.dumps({"error": exc.as_dict()}), file=sys.stderr)

@@ -116,6 +116,20 @@ class CliTests(unittest.TestCase):
             command = runtime_command(runtime_executable=path)
             self.assertEqual(command, [str(path), "serve", "--transport", "stdio"])
 
+    def test_unconfigured_runtime_is_not_auto_discovered_beside_python(self):
+        with tempfile.TemporaryDirectory() as folder:
+            executable = Path(folder) / "python"
+            executable.symlink_to(sys.executable)
+            sibling = Path(folder) / "ooxml-engine"
+            sibling.symlink_to(sys.executable)
+            with (
+                patch("sys.executable", str(executable)),
+                patch.dict(os.environ, {}, clear=True),
+                self.assertRaises(ClientError) as ctx,
+            ):
+                runtime_command()
+        self.assertEqual(ctx.exception.kind, "runtime_not_configured")
+
     def test_native_runtime_environment_is_supported(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "ooxml-engine"

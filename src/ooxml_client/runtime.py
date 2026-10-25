@@ -1,7 +1,6 @@
 """Select a separately installed runtime without importing its packages."""
 
 import os
-import sys
 from pathlib import Path
 
 from .errors import ClientError
@@ -39,9 +38,6 @@ def runtime_command(runtime_python=None, runtime_executable=None):
         path = _executable(value, "runtime Python executable")
         # Preserve the venv entry path: resolving its symlink can select the base interpreter.
         return [str(path), "-I", "-B", "-m", MODULE]
-    sibling = Path(sys.executable).resolve().with_name("ooxml-engine")
-    if sibling.is_file() and os.access(sibling, os.X_OK):
-        return [str(sibling), *NATIVE_COMMAND]
     raise ClientError(
         "runtime_not_configured",
         "Set OOXML_RUNTIME_EXECUTABLE to the native OOXML engine executable, "
