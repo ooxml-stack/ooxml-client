@@ -124,13 +124,17 @@ def main(argv=None):
         ):
             print("Validation reported failure.", file=sys.stderr)
             return 1
-        if (
-            args.command == "apply"
-            and getattr(args, "fail_on_failure", False)
-            and result.get("success") is False
-        ):
-            print("Apply reported failure.", file=sys.stderr)
-            return 1
+        if args.command == "apply" and getattr(args, "fail_on_failure", False):
+            # success alone is not enough: a best-effort plan can report
+            # success=true with failed_count>0, and a save can fail outright.
+            failed = (
+                result.get("success") is False
+                or result.get("failed_count", 0) > 0
+                or result.get("save_status") == "failed"
+            )
+            if failed:
+                print("Apply reported failure.", file=sys.stderr)
+                return 1
         return 0
     except ClientError as exc:
         print(json.dumps({"error": exc.as_dict()}), file=sys.stderr)

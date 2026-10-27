@@ -209,3 +209,37 @@ class ApplyExitCodeTests(unittest.TestCase):
         code, stdout, _ = self._run(result, [])
         self.assertEqual(code, 0)
         self.assertEqual(json.loads(stdout), result)
+
+
+class ApplyPartialFailureTests(unittest.TestCase):
+    """--fail-on-failure must catch partial plans and failed saves, not just success=false."""
+
+    def _run(self, result):
+        output, errors = io.StringIO(), io.StringIO()
+        with (
+            patch("ooxml_client.cli.Client") as factory,
+            contextlib.redirect_stdout(output),
+            contextlib.redirect_stderr(errors),
+        ):
+            factory.return_value.call.return_value = result
+            code = main(["apply", "--params", '{"path": "a.pptx"}', "--fail-on-failure"])
+        return code, json.loads(output.getvalue()), errors.getvalue()
+
+    def test_partial_plan_with_failed_count_exits_nonzero(self):
+        code, receipt, stderr = self._run({"success": True, "failed_count": 1})
+        self.assertEqual(code, 1)
+        self.assertEqual(receipt["failed_count"], 1)
+        self.assertIn("failure", stderr)
+
+    def test_failed_save_exits_nonzero(self):
+        code, _, stderr = self._run({"success": True, "save_status": "failed"})
+        self.assertEqual(code, 1)
+        self.assertIn("failure", stderr)
+
+    def test_clean_result_exits_zero(self):
+        code, _, _ = self._run({"success": True, "failed_count": 0, "save_status": "saved"})
+        self.assertEqual(code, 0)
+
+    def test_missing_failed_count_defaults_to_zero(self):
+        code, _, _ = self._run({"success": True})
+        self.assertEqual(code, 0)
