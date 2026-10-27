@@ -171,3 +171,41 @@ class CliTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ApplyExitCodeTests(unittest.TestCase):
+    """A failed apply must be observable from the shell when explicitly requested."""
+
+    def _run(self, result, extra):
+        output, errors = io.StringIO(), io.StringIO()
+        with (
+            patch("ooxml_client.cli.Client") as factory,
+            contextlib.redirect_stdout(output),
+            contextlib.redirect_stderr(errors),
+        ):
+            factory.return_value.call.return_value = result
+            code = main(["apply", "--params", '{"path": "a.pptx"}', *extra])
+        return code, output.getvalue(), errors.getvalue()
+
+    def test_fail_on_failure_exits_nonzero_for_a_noop_receipt(self):
+        result = {
+            "success": False,
+            "postconditions": {"require_change": {"passed": False, "no_op": True}},
+        }
+        code, stdout, stderr = self._run(result, ["--fail-on-failure"])
+        self.assertEqual(code, 1)
+        # The receipt is still printed so a caller can read why it failed.
+        self.assertEqual(json.loads(stdout), result)
+        self.assertIn("failure", stderr)
+
+    def test_fail_on_failure_keeps_successful_applies_at_exit_zero(self):
+        result = {"success": True, "save_status": "saved"}
+        code, stdout, _ = self._run(result, ["--fail-on-failure"])
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(stdout), result)
+
+    def test_without_the_flag_a_failed_apply_still_exits_zero(self):
+        result = {"success": False}
+        code, stdout, _ = self._run(result, [])
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(stdout), result)

@@ -38,6 +38,14 @@ def _parser():
         action="store_true",
         help="Exit 1 when the validation result reports failure",
     )
+    commands.choices["apply"].add_argument(
+        "--fail-on-failure",
+        action="store_true",
+        help=(
+            "Exit 1 when the apply result reports success=false, including a "
+            "require_change no-op; the JSON receipt is still printed"
+        ),
+    )
     mcp = commands.add_parser("mcp", help="Run the installed Engine's MCP server over stdio")
     mcp.add_argument("--profile", choices=["core", "workflow"], default="core")
     probe = commands.add_parser("probe", help="Probe an MCP profile through the packaged runtime")
@@ -115,6 +123,13 @@ def main(argv=None):
             and (result.get("passed") is False or result.get("status") == "failed")
         ):
             print("Validation reported failure.", file=sys.stderr)
+            return 1
+        if (
+            args.command == "apply"
+            and getattr(args, "fail_on_failure", False)
+            and result.get("success") is False
+        ):
+            print("Apply reported failure.", file=sys.stderr)
             return 1
         return 0
     except ClientError as exc:
