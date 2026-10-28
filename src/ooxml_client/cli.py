@@ -17,7 +17,8 @@ from .status import status as runtime_status
 
 def _parser():
     parser = argparse.ArgumentParser(
-        description="Office operations using a separately installed local Engine."
+        description="Office operations using a separately installed local Engine.",
+        allow_abbrev=False,
     )
     parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument(
@@ -41,10 +42,7 @@ def _parser():
     commands.choices["apply"].add_argument(
         "--fail-on-failure",
         action="store_true",
-        help=(
-            "Exit 1 when the apply result reports success=false, including a "
-            "require_change no-op; the JSON receipt is still printed"
-        ),
+        help="Compatibility flag. Apply failures already exit 1; the JSON receipt is still printed",
     )
     mcp = commands.add_parser("mcp", help="Run the installed Engine's MCP server over stdio")
     mcp.add_argument("--profile", choices=["core", "workflow"], default="core")
@@ -73,6 +71,19 @@ def _params(args):
     if not isinstance(result, dict):
         raise ValueError("Parameters must be a JSON object.")
     return result
+
+
+def _apply_failed(result):
+    validation = result.get("validation")
+    validation_failed = isinstance(validation, dict) and validation.get("passed") is False
+    return (
+        result.get("success") is False
+        or result.get("failed_count", 0) > 0
+        or result.get("save_status") == "failed"
+        or result.get("verification_status") == "failed"
+        or validation_failed
+        or result.get("saved_but_unusable") is True
+    )
 
 
 def _dispatch(args):
@@ -124,17 +135,9 @@ def main(argv=None):
         ):
             print("Validation reported failure.", file=sys.stderr)
             return 1
-        if args.command == "apply" and getattr(args, "fail_on_failure", False):
-            # success alone is not enough: a best-effort plan can report
-            # success=true with failed_count>0, and a save can fail outright.
-            failed = (
-                result.get("success") is False
-                or result.get("failed_count", 0) > 0
-                or result.get("save_status") == "failed"
-            )
-            if failed:
-                print("Apply reported failure.", file=sys.stderr)
-                return 1
+        if args.command == "apply" and _apply_failed(result):
+            print("Apply reported failure.", file=sys.stderr)
+            return 1
         return 0
     except ClientError as exc:
         print(json.dumps({"error": exc.as_dict()}), file=sys.stderr)

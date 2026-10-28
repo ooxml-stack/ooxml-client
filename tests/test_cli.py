@@ -204,17 +204,18 @@ class ApplyExitCodeTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(json.loads(stdout), result)
 
-    def test_without_the_flag_a_failed_apply_still_exits_zero(self):
+    def test_failed_apply_exits_nonzero_by_default(self):
         result = {"success": False}
-        code, stdout, _ = self._run(result, [])
-        self.assertEqual(code, 0)
+        code, stdout, stderr = self._run(result, [])
+        self.assertEqual(code, 1)
         self.assertEqual(json.loads(stdout), result)
+        self.assertIn("failure", stderr)
 
 
 class ApplyPartialFailureTests(unittest.TestCase):
-    """--fail-on-failure must catch partial plans and failed saves, not just success=false."""
+    """Default apply exit status must include partial plans and failed saves."""
 
-    def _run(self, result):
+    def _run(self, result, extra=("--fail-on-failure",)):
         output, errors = io.StringIO(), io.StringIO()
         with (
             patch("ooxml_client.cli.Client") as factory,
@@ -222,7 +223,7 @@ class ApplyPartialFailureTests(unittest.TestCase):
             contextlib.redirect_stderr(errors),
         ):
             factory.return_value.call.return_value = result
-            code = main(["apply", "--params", '{"path": "a.pptx"}', "--fail-on-failure"])
+            code = main(["apply", "--params", '{"path": "a.pptx"}', *extra])
         return code, json.loads(output.getvalue()), errors.getvalue()
 
     def test_partial_plan_with_failed_count_exits_nonzero(self):
@@ -237,9 +238,70 @@ class ApplyPartialFailureTests(unittest.TestCase):
         self.assertIn("failure", stderr)
 
     def test_clean_result_exits_zero(self):
-        code, _, _ = self._run({"success": True, "failed_count": 0, "save_status": "saved"})
+        code, _, _ = self._run(
+            {
+                "success": True,
+                "failed_count": 0,
+                "save_status": "saved",
+                "verification_status": "verified",
+                "validation": {"passed": True},
+            }
+        )
         self.assertEqual(code, 0)
 
     def test_missing_failed_count_defaults_to_zero(self):
         code, _, _ = self._run({"success": True})
         self.assertEqual(code, 0)
+
+    def test_failed_create_verification_exits_nonzero_after_saving(self):
+        result = {
+            "success": True,
+            "save_status": "saved",
+            "verification_status": "failed",
+            "validation": {"passed": True},
+            "operation_id": "presentation.create",
+        }
+        code, receipt, stderr = self._run(result)
+        self.assertEqual(code, 1)
+        self.assertEqual(receipt, result)
+        self.assertIn("failure", stderr)
+
+    def test_failed_create_validation_exits_nonzero_after_saving(self):
+        result = {
+            "success": True,
+            "save_status": "saved",
+            "verification_status": "unverified",
+            "validation": {"passed": False},
+            "operation_id": "presentation.create",
+        }
+        code, receipt, stderr = self._run(result)
+        self.assertEqual(code, 1)
+        self.assertEqual(receipt, result)
+        self.assertIn("failure", stderr)
+
+    def test_saved_but_unusable_create_exits_nonzero(self):
+        result = {
+            "success": True,
+            "failed_count": 0,
+            "save_status": "saved",
+            "verification_status": "unverified",
+            "saved_but_unusable": True,
+            "operation_id": "presentation.create",
+        }
+        code, receipt, stderr = self._run(result)
+        self.assertEqual(code, 1)
+        self.assertEqual(receipt, result)
+        self.assertIn("failure", stderr)
+
+    def test_unverified_saved_create_exits_zero(self):
+        result = {
+            "success": True,
+            "failed_count": 0,
+            "save_status": "saved",
+            "verification_status": "unverified",
+            "saved_but_unusable": False,
+            "operation_id": "presentation.create",
+        }
+        code, receipt, _ = self._run(result)
+        self.assertEqual(code, 0)
+        self.assertEqual(receipt, result)
