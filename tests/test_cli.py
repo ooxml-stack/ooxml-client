@@ -99,14 +99,19 @@ class CliTests(unittest.TestCase):
         self.assertEqual(json.loads(output.getvalue()), result)
 
     def test_relative_runtime_path_is_rejected(self):
-        with self.assertRaises(ClientError):
-            runtime_command("python")
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("OOXML_RUNTIME_EXECUTABLE", None)
+            os.environ.pop("OOXML_RUNTIME_PYTHON", None)
+            with self.assertRaises(ClientError):
+                runtime_command("python")
 
     def test_runtime_symlink_path_is_preserved(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "runtime python"
             path.symlink_to(sys.executable)
-            command = runtime_command(path)
+            with patch.dict(os.environ, {}, clear=False):
+                os.environ.pop("OOXML_RUNTIME_EXECUTABLE", None)
+                command = runtime_command(path)
             self.assertEqual(command[:4], [str(path), "-I", "-B", "-m"])
 
     def test_native_runtime_path_is_preserved_and_uses_serve_stdio(self):
@@ -210,6 +215,14 @@ class ApplyExitCodeTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(json.loads(stdout), result)
         self.assertIn("failure", stderr)
+
+    def test_failed_apply_stderr_carries_first_row_error(self):
+        result = {
+            "success": False,
+            "failures": [{"index": 0, "success": False, "error": "text.replace find did not match target text"}],
+        }
+        _, _, stderr = self._run(result, [])
+        self.assertIn("text.replace find did not match target text", stderr)
 
 
 class ApplyPartialFailureTests(unittest.TestCase):

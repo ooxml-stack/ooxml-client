@@ -86,6 +86,28 @@ def _apply_failed(result):
     )
 
 
+def _apply_failure_reason(result):
+    """First concrete failure detail from an apply receipt, for the CLI stderr line."""
+    for item in result.get("failures") or result.get("results") or []:
+        if isinstance(item, dict) and not item.get("success", True) and item.get("error"):
+            return str(item["error"])[:300]
+    error = result.get("error")
+    if isinstance(error, dict) and error.get("message"):
+        return str(error["message"])[:300]
+    validation = result.get("validation")
+    if isinstance(validation, dict):
+        findings = validation.get("findings") or []
+        if findings:
+            first = findings[0]
+            detail = first.get("message") or first.get("rule_id") if isinstance(first, dict) else str(first)
+            return f"validation: {detail}"[:300]
+    if result.get("save_status") == "failed":
+        return "the runtime could not save the edited file"
+    if result.get("saved_but_unusable") is True:
+        return "the file was saved but failed post-save verification"
+    return "no further detail in the receipt"
+
+
 def _dispatch(args):
     if args.command == "register":
         return distribute.register(
@@ -136,7 +158,7 @@ def main(argv=None):
             print("Validation reported failure.", file=sys.stderr)
             return 1
         if args.command == "apply" and _apply_failed(result):
-            print("Apply reported failure.", file=sys.stderr)
+            print(f"Apply reported failure: {_apply_failure_reason(result)}", file=sys.stderr)
             return 1
         return 0
     except ClientError as exc:
