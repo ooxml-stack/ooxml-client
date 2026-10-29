@@ -378,7 +378,7 @@ wheels = [
 
 [[package]]
 name = "ooxml-client"
-version = "0.1.54"
+version = "0.1.55"
 source = { editable = "." }
 dependencies = [
     { name = "mcp" },
