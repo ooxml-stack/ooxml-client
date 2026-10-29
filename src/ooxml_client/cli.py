@@ -160,6 +160,9 @@ def main(argv=None):
         if args.command == "apply" and _apply_failed(result):
             print(f"Apply reported failure: {_apply_failure_reason(result)}", file=sys.stderr)
             return 1
+        if args.command == "render" and result.get("status") == "failed":
+            print("Render reported failure.", file=sys.stderr)
+            return 1
         return 0
     except ClientError as exc:
         print(json.dumps({"error": exc.as_dict()}), file=sys.stderr)

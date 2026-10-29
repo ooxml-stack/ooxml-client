@@ -320,6 +320,39 @@ class ApplyPartialFailureTests(unittest.TestCase):
         self.assertEqual(receipt, result)
 
 
+class RenderExitCodeTests(unittest.TestCase):
+    """A failed render must be observable from the shell exit code."""
+
+    def _run(self, result):
+        output, errors = io.StringIO(), io.StringIO()
+        with (
+            patch("ooxml_client.cli.Client") as factory,
+            contextlib.redirect_stdout(output),
+            contextlib.redirect_stderr(errors),
+        ):
+            factory.return_value.call.return_value = result
+            code = main(["render", "--params", '{"file": "a.docx", "slides": [99]}'])
+        return code, output.getvalue(), errors.getvalue()
+
+    def test_failed_render_exits_nonzero(self):
+        result = {"status": "failed", "artifacts": []}
+        code, stdout, stderr = self._run(result)
+        self.assertEqual(code, 1)
+        # The receipt is still printed so a caller can read why it failed.
+        self.assertEqual(json.loads(stdout), result)
+        self.assertIn("failure", stderr)
+
+    def test_successful_render_exits_zero(self):
+        result = {"status": "ok", "artifacts": [{"path": "out.pdf", "pages": 1}]}
+        code, stdout, _ = self._run(result)
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(stdout), result)
+
+    def test_render_without_status_keeps_completed_contract(self):
+        code, _, _ = self._run({"artifacts": [{"path": "out.pdf"}]})
+        self.assertEqual(code, 0)
+
+
 class VersionTests(unittest.TestCase):
     def test_reported_version_matches_installed_metadata(self):
         from ooxml_client import __version__
