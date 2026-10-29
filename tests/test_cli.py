@@ -318,3 +318,17 @@ class ApplyPartialFailureTests(unittest.TestCase):
         code, receipt, _ = self._run(result)
         self.assertEqual(code, 0)
         self.assertEqual(receipt, result)
+
+
+class VersionTests(unittest.TestCase):
+    def test_reported_version_matches_installed_metadata(self):
+        from ooxml_client import __version__
+
+        try:
+            from importlib.metadata import version
+
+            installed = version("ooxml-client")
+        except Exception:  # frozen environments may lack dist metadata
+            self.assertTrue(__version__)
+            return
+        self.assertEqual(__version__, installed)
