@@ -1,6 +1,6 @@
 [project]
 name = "ooxml-client"
-version = "0.1.57"
+version = "0.1.58"
 description = "CLI and Python client for a separately installed local OOXML Engine"
 readme = "README.md"
 requires-python = ">=3.10"

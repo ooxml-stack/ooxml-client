@@ -8,7 +8,7 @@ from .errors import ClientError, OperationError
 
 __all__ = ["Client", "ClientError", "OperationError"]
 
-_FALLBACK_VERSION = "0.1.57"
+_FALLBACK_VERSION = "0.1.58"
 
 try:
     __version__ = _package_version("ooxml-client")
