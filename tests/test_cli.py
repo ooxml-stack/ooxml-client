@@ -4,6 +4,8 @@ import contextlib
 import io
 import json
 import os
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -351,6 +353,37 @@ class RenderExitCodeTests(unittest.TestCase):
     def test_render_without_status_keeps_completed_contract(self):
         code, _, _ = self._run({"artifacts": [{"path": "out.pdf"}]})
         self.assertEqual(code, 0)
+
+
+class RenderSubprocessTests(unittest.TestCase):
+    """The render exit-code contract must hold at the real process boundary."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cli = shutil.which("ooxml") or str(Path.home() / ".local/ooxml-dev/OOXML/bin/ooxml")
+        if not Path(cls.cli).exists():
+            raise unittest.SkipTest("no installed ooxml runtime on this host")
+
+    def test_out_of_range_page_exits_nonzero_with_failed_receipt(self):
+        with tempfile.TemporaryDirectory() as folder:
+            doc = Path(folder) / "one-page.docx"
+            created = subprocess.run(
+                [self.cli, "apply", "--params", json.dumps(
+                    {"path": str(doc), "output_path": str(doc),
+                     "operation_id": "document.create", "target": "body", "params": {}})],
+                capture_output=True, text=True, timeout=300,
+            )
+            self.assertEqual(created.returncode, 0, created.stderr)
+
+            rendered = subprocess.run(
+                [self.cli, "render", "--params", json.dumps(
+                    {"file": str(doc), "provider": "libreoffice", "slides": [99], "output_dir": folder})],
+                capture_output=True, text=True, timeout=300,
+            )
+            self.assertEqual(rendered.returncode, 1)
+            receipt = json.loads(rendered.stdout)
+            self.assertEqual(receipt.get("status"), "failed")
+            self.assertEqual(receipt.get("artifacts"), [])
 
 
 class VersionTests(unittest.TestCase):
