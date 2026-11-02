@@ -37,7 +37,17 @@ def _parser():
     commands.choices["validate"].add_argument(
         "--strict",
         action="store_true",
-        help="Exit 1 when the validation result reports failure",
+        help="Compatibility flag; validation failures already exit 1",
+    )
+    commands.choices["validate"].add_argument(
+        "--allow-invalid",
+        action="store_true",
+        help="Exit 0 for a completed validation even when passed=false",
+    )
+    commands.choices["validate"].add_argument(
+        "--fail-on-findings",
+        action="store_true",
+        help="Also exit 1 when status=passed but findings are present",
     )
     commands.choices["apply"].add_argument(
         "--fail-on-failure",
@@ -152,8 +162,12 @@ def main(argv=None):
         print(json.dumps(result, ensure_ascii=False, allow_nan=False))
         if (
             args.command == "validate"
-            and args.strict
-            and (result.get("passed") is False or result.get("status") == "failed")
+            and not args.allow_invalid
+            and (
+                result.get("status") != "passed"
+                or result.get("passed") is False
+                or (args.fail_on_findings and bool(result.get("findings")))
+            )
         ):
             print("Validation reported failure.", file=sys.stderr)
             return 1

@@ -87,7 +87,7 @@ class CliTests(unittest.TestCase):
             code = main(["validate", "--params", '{"path": "a.docx"}', "--strict"])
         self.assertEqual(code, 1)
 
-    def test_validate_without_strict_keeps_the_completed_call_contract(self):
+    def test_validate_default_exits_nonzero_on_failed_result(self):
         result = {"passed": False, "status": "failed", "findings": [{}]}
         output = io.StringIO()
         with (
@@ -97,6 +97,56 @@ class CliTests(unittest.TestCase):
         ):
             factory.return_value.call.return_value = result
             code = main(["validate", "--params", '{"path": "a.docx"}'])
+        self.assertEqual(code, 1)
+        self.assertEqual(json.loads(output.getvalue()), result)
+
+    def test_validate_skipped_exits_nonzero_by_default(self):
+        result = {"passed": False, "status": "skipped", "findings": []}
+        with (
+            patch("ooxml_client.cli.Client") as factory,
+            contextlib.redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            factory.return_value.call.return_value = result
+            code = main(["validate", "--params", '{"path": "a.docx"}'])
+        self.assertEqual(code, 1)
+
+    def test_validate_passed_with_warning_exits_zero_by_default(self):
+        result = {"passed": True, "status": "passed", "findings": [{"severity": "WARNING"}]}
+        with (
+            patch("ooxml_client.cli.Client") as factory,
+            contextlib.redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            factory.return_value.call.return_value = result
+            code = main(["validate", "--params", '{"path": "a.docx"}'])
+        self.assertEqual(code, 0)
+
+    def test_validate_fail_on_findings_exits_nonzero_for_passed_warning(self):
+        result = {"passed": True, "status": "passed", "findings": [{"severity": "WARNING"}]}
+        with (
+            patch("ooxml_client.cli.Client") as factory,
+            contextlib.redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            factory.return_value.call.return_value = result
+            code = main(
+                ["validate", "--params", '{"path": "a.docx"}', "--fail-on-findings"]
+            )
+        self.assertEqual(code, 1)
+
+    def test_validate_allow_invalid_keeps_completed_call_at_zero(self):
+        result = {"passed": False, "status": "failed", "findings": [{}]}
+        output = io.StringIO()
+        with (
+            patch("ooxml_client.cli.Client") as factory,
+            contextlib.redirect_stdout(output),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            factory.return_value.call.return_value = result
+            code = main(
+                ["validate", "--params", '{"path": "a.docx"}', "--allow-invalid"]
+            )
         self.assertEqual(code, 0)
         self.assertEqual(json.loads(output.getvalue()), result)
 

@@ -149,7 +149,9 @@ client JSON errors.
 CLI exit 0 means the MCP tool call completed, not that every reported validation check or
 business requirement passed. Read the result's findings and status. `ooxml validate --strict`
 exits 1 when the validation result reports `passed=false` or `status=failed`, so scripts can
-gate on the exit code; without `--strict` a completed validation call always exits 0. Runtime and
+gate on the exit code; failed or skipped validation exits nonzero by default. `--allow-invalid`
+restores exit 0 for a completed failed result, and `--fail-on-findings` also fails warning-only
+results. Runtime and
 transport errors exit 1; invalid client input exits 2. Successful results go to
 stdout, client errors to stderr, and MCP inherits the runtime's exit behavior.
 
